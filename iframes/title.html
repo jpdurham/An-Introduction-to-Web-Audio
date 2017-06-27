@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Three.js Cube</title>
+    
+    <style type="text/css">
+      html { overflow: hidden; }
+      body { margin: 0; padding: 0; overflow: hidden; font-family: Monospace; font-size: 13px; line-height: 20px; color: #333; }
+
+    body { margin:0; padding:0; }
+
+    html, body { width:100%; height:100%; }
+
+    canvas { display:block; }
+    </style>
+
+  </head>
+
+  <body>
+<script>
+    
+    var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+navigator.getUserMedia({audio: true}, function(stream) {
+
+  var source = audioCtx.createMediaStreamSource(stream);
+  // https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API#Defining_audio_effects_filters
+  // var filter = audioCtx.createBiquadFilter();
+  var analyser = audioCtx.createAnalyser();
+  source.connect(analyser);
+
+  // microphone -> filter -> destination.
+  // source.connect(filter);
+  // filter.connect(audioCtx.destination);
+  source.connect(audioCtx.destination);
+    
+  // default FFT frequency domain 
+  analyser.fftSize = 2048;
+  var bufferLength = analyser.frequencyBinCount;
+  // normal JS Arrays don't work since 
+  var dataArray = new Uint8Array(bufferLength);
+  
+  // retrieve the data and copy it into our array
+  analyser.getByteTimeDomainData(dataArray);
+  
+  cWidth = window.innerWidth;
+  cHeight = window.innerHeight;
+  
+  canvas = document.getElementById('canvas');
+  canvasCtx = canvas.getContext("2d");
+  canvasCtx.width = cWidth;
+  canvasCtx.height = cHeight;
+  
+  canvasCtx.clearRect(0, 0, cWidth, cHeight);
+  
+  function draw() {
+    drawVisual = requestAnimationFrame(draw);
+    analyser.getByteTimeDomainData(dataArray);
+    canvasCtx.fillStyle = '#222';
+    canvasCtx.fillRect(0, 0, cWidth, cHeight);
+    canvasCtx.lineWidth = 2;
+    canvasCtx.strokeStyle = '#BADA55';
+    canvasCtx.beginPath();
+    
+    var sliceWidth = cWidth * 1.0 / bufferLength;
+    var x = 0;
+    
+    for(var i = 0; i < bufferLength; i++) {
+      var v = dataArray[i] / 128.0;
+      var y = v * cHeight/2;
+
+      if(i === 0) {
+        canvasCtx.moveTo(x, y);
+      } else {
+        canvasCtx.lineTo(x, y);
+      }
+
+      x += sliceWidth;
+    }
+    
+    canvasCtx.lineTo(canvas.width, canvas.height/2);
+      canvasCtx.stroke();
+    };
+  
+  window.addEventListener('resize', resizeCanvas, false);
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cWidth = window.innerWidth;
+    cHeight = window.innerHeight;
+    draw();
+  }
+  resizeCanvas();
+  
+  draw();
+
+}, 
+   // error callback
+   function(err) {
+      console.log("The following error occured: " + err.name)
+    });
+</script>
+  </body>
+  <canvas id="canvas"></canvas>
+</html>
